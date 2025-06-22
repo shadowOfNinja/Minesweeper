@@ -1,7 +1,5 @@
-
 import java.awt.*;
 import java.awt.event.*;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Random;
 import javax.swing.*;
@@ -15,7 +13,6 @@ public class Minesweeper {
         MineTile(int r, int c) {
             this.r = r;
             this.c = c;
-            
         }
     }
 
@@ -24,6 +21,9 @@ public class Minesweeper {
     int numCols = numRows;
     int boardWidth = numCols * tileSize;
     int boardHeight = numRows * tileSize;
+
+    Image mineIcon;
+    Image flagIcon;
     
     JFrame frame = new JFrame("Minesweeper");
     JLabel textLabel = new JLabel();
@@ -57,6 +57,10 @@ public class Minesweeper {
         boardPanel.setLayout(new GridLayout(numRows, numCols));
         frame.add(boardPanel);
 
+        //load images
+        mineIcon = new ImageIcon(getClass().getResource("./Mine.png")).getImage().getScaledInstance(45, 45, Image.SCALE_SMOOTH);
+        flagIcon = new ImageIcon(getClass().getResource("./Flag.png")).getImage().getScaledInstance(45, 45, Image.SCALE_SMOOTH);
+
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
                 MineTile tile = new MineTile(r, c);
@@ -65,7 +69,6 @@ public class Minesweeper {
                 tile.setFocusable(false);
                 tile.setMargin(new Insets(0,0,0,0));
                 tile.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 45));
-                //tile.setText("😀");
                 tile.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mousePressed(MouseEvent e) {
@@ -86,10 +89,10 @@ public class Minesweeper {
                             }
                         } else if (e.getButton() == MouseEvent.BUTTON3) {
                             // Right click action
-                            if (tile.getText() == "" && tile.isEnabled()) {
-                                tile.setText("🚩"); // Example action
-                            } else if (tile.getText() == "🚩") {
-                                tile.setText(""); // Remove flag
+                            if (tile.getIcon() == null && tile.isEnabled()) {
+                                tile.setIcon(new ImageIcon(flagIcon)); // Example action
+                            } else if (tile.getIcon() != null) {
+                                tile.setIcon(null); // Remove flag
                             }
                         }
                     }
@@ -97,6 +100,7 @@ public class Minesweeper {
                 boardPanel.add(tile);
             }
         }
+        frame.setAlwaysOnTop(true);
         frame.setVisible(true);
 
         setMines();
@@ -120,7 +124,7 @@ public class Minesweeper {
 
     void revealMines() {
         for (MineTile mine : mineList) {
-            mine.setText("💣");
+            mine.setIcon(new ImageIcon(mineIcon));
         }
         gameOver = true;
         textLabel.setText("Game Over!");
@@ -155,6 +159,36 @@ public class Minesweeper {
         minesFound += countMine(r+1, c+1); // bottom right
 
         if (minesFound > 0) {
+            tile.setFont(new Font("Arial", Font.BOLD, 45));
+            switch (minesFound) {
+                case 1:
+                    tile.setForeground(Color.BLUE);
+                    break;
+                case 2:
+                    tile.setForeground(Color.GREEN);
+                    break;
+                case 3:
+                    tile.setForeground(Color.RED);
+                    break;
+                case 4:
+                    tile.setForeground(new Color(128, 0, 128)); // Purple
+                    break;
+                case 5:
+                    tile.setForeground(new Color(128, 0, 0)); // Maroon
+                    break;
+                case 6:
+                    tile.setForeground(new Color(0, 128, 128)); // Teal
+                    break;
+                case 7:
+                    tile.setForeground(Color.BLACK);
+                    break;
+                case 8:
+                    tile.setForeground(Color.GRAY);
+                    break;
+                default:
+                    System.out.println("Unexpected mine count: " + minesFound);
+                    break;
+            }
             tile.setText(Integer.toString(minesFound));
         } else {
             tile.setText(""); // No mines around, leave it empty
@@ -190,3 +224,9 @@ public class Minesweeper {
         return 0;
     }
 }
+
+//To DO
+//1) Change text colours based on the number of mines around - DONE
+//   Also, replace use of emojis with icon images for better aesthetics
+//2) Add a timer
+//3) Add a reset button / reactive button like the original
