@@ -38,6 +38,13 @@ public class Minesweeper {
     int tilesClicked = 0; //goal is to click all tiles without mines
     boolean gameOver = false;
 
+    JLabel mineCountLabel = new JLabel();
+    JButton resetButton = new JButton(); // You can use an icon or emoji here
+    JLabel timerLabel = new JLabel("00:00");
+
+    Timer timer;
+    int elapsedSeconds = 0;
+
     Minesweeper() {
         frame.setSize(boardWidth, boardHeight);
         frame.setLocationRelativeTo(null);
@@ -45,13 +52,41 @@ public class Minesweeper {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
 
-        textLabel.setFont(new Font("Arial", Font.BOLD, 25));
-        textLabel.setHorizontalAlignment(JLabel.CENTER);
-        textLabel.setText("Minesweeper: " + Integer.toString(minecount));
-        textLabel.setOpaque(true);
+        mineCountLabel.setFont(new Font("Arial", Font.BOLD, 25));
+        mineCountLabel.setHorizontalAlignment(JLabel.CENTER);
+        mineCountLabel.setText("Mines: " + minecount);
 
-        textPanel.setLayout(new BorderLayout());
-        textPanel.add(textLabel);
+        resetButton.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 25));
+        resetButton.setText("😊"); // Reset button with an emoji
+        resetButton.setFocusable(false);
+        resetButton.addActionListener(e -> resetGame());
+
+        // Timer setup (start when game starts)
+        timer = new Timer(1000, e -> {
+            elapsedSeconds++;
+            int minutes = elapsedSeconds / 60;
+            int seconds = elapsedSeconds % 60;
+            timerLabel.setText(String.format("%02d:%02d", minutes, seconds));
+        });
+
+        timerLabel.setFont(new Font("Arial", Font.BOLD, 25));
+        timerLabel.setHorizontalAlignment(JLabel.CENTER);
+
+        // Use a GridBagLayout for flexible arrangement
+        textPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(0, 10, 0, 10);
+        gbc.gridy = 0;
+
+        gbc.gridx = 0;
+        textPanel.add(mineCountLabel, gbc);
+
+        gbc.gridx = 1;
+        textPanel.add(resetButton, gbc);
+
+        gbc.gridx = 2;
+        textPanel.add(timerLabel, gbc);
+
         frame.add(textPanel, BorderLayout.NORTH);
 
         boardPanel.setLayout(new GridLayout(numRows, numCols));
@@ -79,6 +114,20 @@ public class Minesweeper {
                         
                         if (e.getButton() == MouseEvent.BUTTON1) {
                             // Left click action
+                            if (timer.isRunning() == false) {
+                                // Start the timer when the first tile is clicked
+                                timer = new Timer(1000, new ActionListener() {
+                                    @Override
+                                    public void actionPerformed(ActionEvent e) {
+                                        elapsedSeconds++;
+                                        int minutes = elapsedSeconds / 60;
+                                        int seconds = elapsedSeconds % 60;
+                                        timerLabel.setText(String.format("%02d:%02d", minutes, seconds));
+                                    }
+                                });
+                                timer.start();
+                            }
+
                             if (tile.getText() == "") {
                                 if (mineList.contains(tile)) {
                                     revealMines();
@@ -128,6 +177,8 @@ public class Minesweeper {
         }
         gameOver = true;
         textLabel.setText("Game Over!");
+        resetButton.setText("😢"); // Change reset button to a sad face
+        timer.stop();
     }
 
     void checkMine(int r, int c) {
@@ -211,6 +262,8 @@ public class Minesweeper {
         if (tilesClicked == (numRows * numCols) - mineList.size()) {
             textLabel.setText("Mines Cleared!");
             gameOver = true;
+            timer.stop();
+            resetButton.setText("😎"); // Change reset button to a celebration face
         }
     }
 
@@ -223,10 +276,45 @@ public class Minesweeper {
         }
         return 0;
     }
+
+    void resetGame() {
+        // Stop and reset timer
+        if (timer != null) {
+            timer.stop();
+        }
+        elapsedSeconds = 0;
+        timerLabel.setText("00:00");
+
+        // Reset game state
+        tilesClicked = 0;
+        gameOver = false;
+        mineCountLabel.setText("Mines: " + minecount);
+
+        // Remove all icons and reset all tiles
+        for (int r = 0; r < numRows; r++) {
+            for (int c = 0; c < numCols; c++) {
+                MineTile tile = board[r][c];
+                tile.setEnabled(true);
+                tile.setText("");
+                tile.setIcon(null);
+                tile.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 45));
+                tile.setForeground(Color.BLACK);
+            }
+        }
+
+        // Reset mines
+        setMines();
+
+        resetButton.setText("😊");
+
+        // Clear any status text
+        textLabel.setText("");
+    } 
 }
 
 //To DO
 //1) Change text colours based on the number of mines around - DONE
-//   Also, replace use of emojis with icon images for better aesthetics
-//2) Add a timer
-//3) Add a reset button / reactive button like the original
+//   Also, replace use of emojis with icon images for better aesthetics - DONE
+//2) Add a timer - DONE
+//3) Add a reset button / reactive button like the original - DONE
+//4) Make the mine count decrease when a flag is placed
