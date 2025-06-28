@@ -24,13 +24,14 @@ public class Minesweeper {
 
     Image mineIcon;
     Image flagIcon;
+    Image flaggedMineIcon;
     
     JFrame frame = new JFrame("Minesweeper");
-    JLabel textLabel = new JLabel();
     JPanel textPanel = new JPanel();
     JPanel boardPanel = new JPanel();
 
     int minecount = 10; // Number of mines
+    int flagCount = 0; // Count of flags placed
     MineTile[][] board = new MineTile[numRows][numCols];
     ArrayList<MineTile> mineList = new ArrayList<>();
     Random random = new Random();
@@ -95,6 +96,7 @@ public class Minesweeper {
         //load images
         mineIcon = new ImageIcon(getClass().getResource("./Mine.png")).getImage().getScaledInstance(45, 45, Image.SCALE_SMOOTH);
         flagIcon = new ImageIcon(getClass().getResource("./Flag.png")).getImage().getScaledInstance(45, 45, Image.SCALE_SMOOTH);
+        flaggedMineIcon = new ImageIcon(getClass().getResource("./FlaggedMine.png")).getImage().getScaledInstance(45, 45, Image.SCALE_SMOOTH);
 
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
@@ -110,6 +112,17 @@ public class Minesweeper {
                         if (gameOver) {
                             return; // Ignore clicks if the game is over
                         }
+                        if (e.getButton() == MouseEvent.BUTTON1) {
+                            resetButton.setText("😨"); // Change reset button to a worried face
+                        }
+                    }
+
+                    @Override
+                    public void mouseReleased(MouseEvent e) {
+                        if (gameOver) {
+                            return; // Ignore clicks if the game is over
+                        }
+                        resetButton.setText("😊");
                         MineTile tile = (MineTile) e.getSource();
                         
                         if (e.getButton() == MouseEvent.BUTTON1) {
@@ -138,11 +151,23 @@ public class Minesweeper {
                             }
                         } else if (e.getButton() == MouseEvent.BUTTON3) {
                             // Right click action
-                            if (tile.getIcon() == null && tile.isEnabled()) {
+                            if (tile.getIcon() == null && tile.getText().equals("") && flagCount < 10 && tile.isEnabled()) {
                                 tile.setIcon(new ImageIcon(flagIcon)); // Example action
-                            } else if (tile.getIcon() != null) {
+                                flagCount++;
+                                //mineCountLabel.setText("Mines: " + (minecount - flagCount));
+                            } else if (tile.getIcon() != null && tile.isEnabled()) {
+                                tile.setIcon(null); // Remove flag
+                                tile.setText("?");
+                                flagCount--;
+                                //mineCountLabel.setText("Mines: " + (minecount - flagCount));
+                            } else if (tile.getText().equals("?") && tile.isEnabled()) {
+                                tile.setText(""); // Remove question mark
                                 tile.setIcon(null); // Remove flag
                             }
+
+                            // Clamp value and update label
+                            flagCount = Math.max(0, Math.min(flagCount, minecount));
+                            mineCountLabel.setText("Mines: " + (minecount - flagCount));
                         }
                     }
                 });
@@ -173,11 +198,17 @@ public class Minesweeper {
 
     void revealMines() {
         for (MineTile mine : mineList) {
-            mine.setIcon(new ImageIcon(mineIcon));
+            if (mine.getIcon() != null) {
+                mine.setIcon(new ImageIcon(flaggedMineIcon)); // Show flag icon for mines
+            }
+            else {
+                mine.setText(""); // Clear text
+                mine.setIcon(new ImageIcon(mineIcon));
+            }
         }
         gameOver = true;
-        textLabel.setText("Game Over!");
         resetButton.setText("😢"); // Change reset button to a sad face
+        mineCountLabel.setText("You Lost!"); // Update mine count label to indicate a loss
         timer.stop();
     }
 
@@ -190,6 +221,14 @@ public class Minesweeper {
         if (!tile.isEnabled()) {
             return; // Tile already checked
         }
+
+        // If the tile is flagged, remove the flag and update the count before disabling
+        if (tile.getIcon() != null) {
+            tile.setIcon(null);
+            flagCount = Math.max(0, flagCount - 1);
+            mineCountLabel.setText("Mines: " + (minecount - flagCount));
+        }
+
         tile.setEnabled(false);
         tilesClicked++;
 
@@ -243,6 +282,15 @@ public class Minesweeper {
             tile.setText(Integer.toString(minesFound));
         } else {
             tile.setText(""); // No mines around, leave it empty
+            if (tile.getIcon() != null) {
+                System.out.println("Tile at (" + r + ", " + c + ") has a flag icon, but no mines around.");
+                tile.setEnabled(true);
+                tile.setIcon(null);
+                // Decrement flagCount and update label
+                flagCount = Math.max(0, flagCount - 1);
+                mineCountLabel.setText("Mines: " + (minecount - flagCount));
+                tile.setEnabled(false);
+            }
             
             //top 3
             checkMine(r-1, c-1); // top left
@@ -260,10 +308,10 @@ public class Minesweeper {
         }
 
         if (tilesClicked == (numRows * numCols) - mineList.size()) {
-            textLabel.setText("Mines Cleared!");
             gameOver = true;
             timer.stop();
             resetButton.setText("😎"); // Change reset button to a celebration face
+            mineCountLabel.setText("You Win!"); // Update mine count label to indicate win
         }
     }
 
@@ -287,6 +335,7 @@ public class Minesweeper {
 
         // Reset game state
         tilesClicked = 0;
+        flagCount = 0;
         gameOver = false;
         mineCountLabel.setText("Mines: " + minecount);
 
@@ -306,9 +355,6 @@ public class Minesweeper {
         setMines();
 
         resetButton.setText("😊");
-
-        // Clear any status text
-        textLabel.setText("");
     } 
 }
 
@@ -317,4 +363,6 @@ public class Minesweeper {
 //   Also, replace use of emojis with icon images for better aesthetics - DONE
 //2) Add a timer - DONE
 //3) Add a reset button / reactive button like the original - DONE
-//4) Make the mine count decrease when a flag is placed
+//4) Make the mine count decrease when a flag is placed - DONE
+//5) In game over state, add a new icon for a mine that was flagged - DONE
+//6) Fix bug where a flagged tile that is later cleared removes the flag and corrects the flag count - THINK DONE
