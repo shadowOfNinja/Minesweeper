@@ -5,6 +5,8 @@ import java.util.Random;
 import javax.swing.*;
 
 public class Minesweeper {
+    final int MAX_WINDOW_WIDTH = 800;
+    final int MAX_WINDOW_HEIGHT = 800;
 
     private class MineTile extends JButton {
         int r;
@@ -16,11 +18,13 @@ public class Minesweeper {
         }
     }
 
-    int tileSize = 70;
     int numRows = 8;
     int numCols = numRows;
+    int tileSize = Math.min(MAX_WINDOW_WIDTH / numCols, MAX_WINDOW_HEIGHT / numRows);
     int boardWidth = numCols * tileSize;
     int boardHeight = numRows * tileSize;
+
+    double textScale; // Scale for text size
 
     Image mineIcon;
     Image flagIcon;
@@ -93,89 +97,41 @@ public class Minesweeper {
         boardPanel.setLayout(new GridLayout(numRows, numCols));
         frame.add(boardPanel);
 
+        updateTextScale(); // Initialize text scale based on default difficulty
+
         //load images
-        mineIcon = new ImageIcon(getClass().getResource("./Mine.png")).getImage().getScaledInstance(45, 45, Image.SCALE_SMOOTH);
-        flagIcon = new ImageIcon(getClass().getResource("./Flag.png")).getImage().getScaledInstance(45, 45, Image.SCALE_SMOOTH);
-        flaggedMineIcon = new ImageIcon(getClass().getResource("./FlaggedMine.png")).getImage().getScaledInstance(45, 45, Image.SCALE_SMOOTH);
+        mineIcon = new ImageIcon(getClass().getResource("./Mine.png")).getImage().getScaledInstance(tileSize - 10, tileSize - 10, Image.SCALE_SMOOTH);
+        flagIcon = new ImageIcon(getClass().getResource("./Flag.png")).getImage().getScaledInstance(tileSize - 10, tileSize - 10, Image.SCALE_SMOOTH);
+        flaggedMineIcon = new ImageIcon(getClass().getResource("./FlaggedMine.png")).getImage().getScaledInstance(tileSize - 10, tileSize - 10, Image.SCALE_SMOOTH);
 
         for (int r = 0; r < numRows; r++) {
             for (int c = 0; c < numCols; c++) {
-                MineTile tile = new MineTile(r, c);
+                MineTile tile = createAndAddTile(r, c);
                 board[r][c] = tile;
-                
-                tile.setFocusable(false);
-                tile.setMargin(new Insets(0,0,0,0));
-                tile.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 45));
-                tile.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mousePressed(MouseEvent e) {
-                        if (gameOver) {
-                            return; // Ignore clicks if the game is over
-                        }
-                        if (e.getButton() == MouseEvent.BUTTON1) {
-                            resetButton.setText("😨"); // Change reset button to a worried face
-                        }
-                    }
-
-                    @Override
-                    public void mouseReleased(MouseEvent e) {
-                        if (gameOver) {
-                            return; // Ignore clicks if the game is over
-                        }
-                        resetButton.setText("😊");
-                        MineTile tile = (MineTile) e.getSource();
-                        
-                        if (e.getButton() == MouseEvent.BUTTON1) {
-                            // Left click action
-                            if (timer.isRunning() == false) {
-                                // Start the timer when the first tile is clicked
-                                timer = new Timer(1000, new ActionListener() {
-                                    @Override
-                                    public void actionPerformed(ActionEvent e) {
-                                        elapsedSeconds++;
-                                        int minutes = elapsedSeconds / 60;
-                                        int seconds = elapsedSeconds % 60;
-                                        timerLabel.setText(String.format("%02d:%02d", minutes, seconds));
-                                    }
-                                });
-                                timer.start();
-                            }
-
-                            if (tile.getText() == "") {
-                                if (mineList.contains(tile)) {
-                                    revealMines();
-                                }
-                                else {
-                                    checkMine(tile.r, tile.c);
-                                }
-                            }
-                        } else if (e.getButton() == MouseEvent.BUTTON3) {
-                            // Right click action
-                            if (tile.getIcon() == null && tile.getText().equals("") && flagCount < 10 && tile.isEnabled()) {
-                                tile.setIcon(new ImageIcon(flagIcon)); // Example action
-                                flagCount++;
-                                //mineCountLabel.setText("Mines: " + (minecount - flagCount));
-                            } else if (tile.getIcon() != null && tile.isEnabled()) {
-                                tile.setIcon(null); // Remove flag
-                                tile.setText("?");
-                                flagCount--;
-                                //mineCountLabel.setText("Mines: " + (minecount - flagCount));
-                            } else if (tile.getText().equals("?") && tile.isEnabled()) {
-                                tile.setText(""); // Remove question mark
-                                tile.setIcon(null); // Remove flag
-                            }
-
-                            // Clamp value and update label
-                            flagCount = Math.max(0, Math.min(flagCount, minecount));
-                            mineCountLabel.setText("Mines: " + (minecount - flagCount));
-                        }
-                    }
-                });
                 boardPanel.add(tile);
             }
         }
         frame.setAlwaysOnTop(true);
         frame.setVisible(true);
+
+        // Create menu bar
+        JMenuBar menuBar = new JMenuBar();
+        JMenu gameMenu = new JMenu("Game");
+
+        JMenuItem beginnerItem = new JMenuItem("Beginner (8x8, 10 mines)");
+        JMenuItem intermediateItem = new JMenuItem("Intermediate (16x16, 40 mines)");
+        JMenuItem expertItem = new JMenuItem("Expert (24x24, 99 mines)");
+
+        gameMenu.add(beginnerItem);
+        gameMenu.add(intermediateItem);
+        gameMenu.add(expertItem);
+        menuBar.add(gameMenu);
+        frame.setJMenuBar(menuBar);
+
+        // Add action listeners for difficulty changes
+        beginnerItem.addActionListener(e -> setDifficulty(8, 8, 10));
+        intermediateItem.addActionListener(e -> setDifficulty(16, 16, 40));
+        expertItem.addActionListener(e -> setDifficulty(24, 24, 99));
 
         setMines();
     }
@@ -249,7 +205,7 @@ public class Minesweeper {
         minesFound += countMine(r+1, c+1); // bottom right
 
         if (minesFound > 0) {
-            tile.setFont(new Font("Arial", Font.BOLD, 45));
+            tile.setFont(new Font("Arial", Font.BOLD, (int)(tileSize / textScale))); // Font scales with tile size
             switch (minesFound) {
                 case 1:
                     tile.setForeground(Color.BLUE);
@@ -345,7 +301,7 @@ public class Minesweeper {
                 tile.setEnabled(true);
                 tile.setText("");
                 tile.setIcon(null);
-                tile.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 45));
+                tile.setFont(new Font("Arial", Font.BOLD, (int)(tileSize / textScale))); // Font scales with tile size
                 tile.setForeground(Color.BLACK);
             }
         }
@@ -355,6 +311,199 @@ public class Minesweeper {
 
         resetButton.setText("😊");
     } 
+
+    void setDifficulty(int rows, int cols, int mines) {
+        // Stop timer if running
+        if (timer != null) timer.stop();
+
+        // Update settings
+        numRows = rows;
+        numCols = cols;
+        minecount = mines;
+
+        updateTextScale(); // <-- Add this line
+
+        tileSize = Math.min(MAX_WINDOW_WIDTH / cols, MAX_WINDOW_HEIGHT / rows);
+        boardWidth = cols * tileSize;
+        boardHeight = rows * tileSize;
+        frame.setSize(boardWidth, boardHeight);
+
+        // Reload images with new tileSize
+        mineIcon = new ImageIcon(getClass().getResource("./Mine.png")).getImage().getScaledInstance(tileSize - 10, tileSize - 10, Image.SCALE_SMOOTH);
+        flagIcon = new ImageIcon(getClass().getResource("./Flag.png")).getImage().getScaledInstance(tileSize - 10, tileSize - 10, Image.SCALE_SMOOTH);
+        flaggedMineIcon = new ImageIcon(getClass().getResource("./FlaggedMine.png")).getImage().getScaledInstance(tileSize - 10, tileSize - 10, Image.SCALE_SMOOTH);
+
+        // Remove old board
+        frame.remove(boardPanel);
+
+        // Create new board panel and tiles
+        boardPanel = new JPanel(new GridLayout(numRows, numCols));
+        board = new MineTile[numRows][numCols];
+        for (int r = 0; r < numRows; r++) {
+            for (int c = 0; c < numCols; c++) {
+                MineTile tile = new MineTile(r, c);
+                board[r][c] = tile;
+                tile.setFocusable(false);
+                tile.setMargin(new Insets(0,0,0,0));
+                tile.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 45));
+                tile.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mousePressed(MouseEvent e) {
+                        if (gameOver) {
+                            return; // Ignore clicks if the game is over
+                        }
+                        if (e.getButton() == MouseEvent.BUTTON1) {
+                            resetButton.setText("😨"); // Change reset button to a worried face
+                        }
+                    }
+
+                    @Override
+                    public void mouseReleased(MouseEvent e) {
+                        if (gameOver) {
+                            return; // Ignore clicks if the game is over
+                        }
+                        resetButton.setText("😊");
+                        MineTile tile = (MineTile) e.getSource();
+                        
+                        if (e.getButton() == MouseEvent.BUTTON1) {
+                            // Left click action
+                            if (timer.isRunning() == false) {
+                                // Start the timer when the first tile is clicked
+                                timer = new Timer(1000, new ActionListener() {
+                                    @Override
+                                    public void actionPerformed(ActionEvent e) {
+                                        elapsedSeconds++;
+                                        int minutes = elapsedSeconds / 60;
+                                        int seconds = elapsedSeconds % 60;
+                                        timerLabel.setText(String.format("%02d:%02d", minutes, seconds));
+                                    }
+                                });
+                                timer.start();
+                            }
+
+                            if (tile.getText() == "") {
+                                if (mineList.contains(tile)) {
+                                    revealMines();
+                                }
+                                else {
+                                    checkMine(tile.r, tile.c);
+                                }
+                            }
+                        } else if (e.getButton() == MouseEvent.BUTTON3) {
+                            // Right click action
+                            if (tile.getIcon() == null && tile.getText().equals("") && flagCount < 10 && tile.isEnabled()) {
+                                tile.setIcon(new ImageIcon(flagIcon)); // Example action
+                                flagCount++;
+                                //mineCountLabel.setText("Mines: " + (minecount - flagCount));
+                            } else if (tile.getIcon() != null && tile.isEnabled()) {
+                                tile.setIcon(null); // Remove flag
+                                tile.setText("?");
+                                flagCount--;
+                                //mineCountLabel.setText("Mines: " + (minecount - flagCount));
+                            } else if (tile.getText().equals("?") && tile.isEnabled()) {
+                                tile.setText(""); // Remove question mark
+                                tile.setIcon(null); // Remove flag
+                            }
+
+                            // Clamp value and update label
+                            flagCount = Math.max(0, Math.min(flagCount, minecount));
+                            mineCountLabel.setText("Mines: " + (minecount - flagCount));
+                        }
+                    }
+                });
+                boardPanel.add(tile);
+            }
+        }
+        frame.add(boardPanel);
+        frame.revalidate();
+        frame.repaint();
+
+        // Reset game state
+        resetGame();
+    }
+
+    // Add this method inside your Minesweeper class:
+    private MineTile createAndAddTile(int r, int c) {
+        MineTile tile = new MineTile(r, c);
+        tile.setPreferredSize(new Dimension(tileSize, tileSize));
+        tile.setFont(new Font("Arial", Font.BOLD, (int)(tileSize / textScale))); // Font scales with tile size
+        tile.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (gameOver) {
+                    return; // Ignore clicks if the game is over
+                }
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    resetButton.setText("😨"); // Change reset button to a worried face
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (gameOver) {
+                    return; // Ignore clicks if the game is over
+                }
+                resetButton.setText("😊");
+                MineTile tile = (MineTile) e.getSource();
+
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    // Left click action
+                    if (timer.isRunning() == false) {
+                        timer = new Timer(1000, new ActionListener() {
+                            @Override
+                            public void actionPerformed(ActionEvent e) {
+                                elapsedSeconds++;
+                                int minutes = elapsedSeconds / 60;
+                                int seconds = elapsedSeconds % 60;
+                                timerLabel.setText(String.format("%02d:%02d", minutes, seconds));
+                            }
+                        });
+                        timer.start();
+                    }
+
+                    if (tile.getText().equals("")) {
+                        if (mineList.contains(tile)) {
+                            revealMines();
+                        } else {
+                            checkMine(tile.r, tile.c);
+                        }
+                    }
+                } else if (e.getButton() == MouseEvent.BUTTON3) {
+                    // Right click action
+                    if (tile.getIcon() == null && tile.getText().equals("") && flagCount < minecount && tile.isEnabled()) {
+                        tile.setIcon(new ImageIcon(flagIcon));
+                        flagCount++;
+                    } else if (tile.getIcon() != null && tile.isEnabled()) {
+                        tile.setIcon(null); // Remove flag
+                        tile.setText("?");
+                        flagCount--;
+                    } else if (tile.getText().equals("?") && tile.isEnabled()) {
+                        tile.setText(""); // Remove question mark
+                        tile.setIcon(null); // Remove flag
+                    }
+
+                    // Clamp value and update label
+                    flagCount = Math.max(0, Math.min(flagCount, minecount));
+                    mineCountLabel.setText("Mines: " + (minecount - flagCount));
+                }
+            }
+        });
+        return tile;
+    }
+
+    // Add this method to your Minesweeper class:
+    private void updateTextScale() {
+        // Adjust these thresholds and scales as needed for your UI
+        int maxDim = Math.max(numRows, numCols);
+        if (maxDim <= 8) {
+            textScale = 2; // Beginner
+        } else if (maxDim <= 16) {
+            textScale = 3; // Intermediate
+        } else {
+            textScale = 4; // Expert
+        }
+        System.out.println("Text scale set to: " + textScale);
+    }
 }
 
 //To DO
@@ -364,5 +513,5 @@ public class Minesweeper {
 //3) Add a reset button / reactive button like the original - DONE
 //4) Make the mine count decrease when a flag is placed - DONE
 //5) In game over state, add a new icon for a mine that was flagged - DONE
-//6) Fix bug where a flagged tile that is later cleared removes the flag and corrects the flag count - THINK DONE
-//7) Add UI for different difficulty levels
+//6) Fix bug where a flagged tile that is later cleared removes the flag and corrects the flag count - DONE
+//7) Add UI for different difficulty levels - DONE
