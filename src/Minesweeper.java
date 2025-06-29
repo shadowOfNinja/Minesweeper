@@ -46,6 +46,7 @@ public class Minesweeper {
     JLabel mineCountLabel = new JLabel();
     JButton resetButton = new JButton(); // You can use an icon or emoji here
     JLabel timerLabel = new JLabel("00:00");
+    JLabel clearedLabel = new JLabel("0% cleared");
 
     Timer timer;
     int elapsedSeconds = 0;
@@ -91,6 +92,10 @@ public class Minesweeper {
 
         gbc.gridx = 2;
         textPanel.add(timerLabel, gbc);
+
+        gbc.gridx = 3;
+        clearedLabel.setFont(new Font("Arial", Font.BOLD, 25));
+        textPanel.add(clearedLabel, gbc);
 
         frame.add(textPanel, BorderLayout.NORTH);
 
@@ -190,6 +195,7 @@ public class Minesweeper {
 
         tile.setEnabled(false);
         tilesClicked++;
+        updateClearedLabel(); // Update cleared label after clicking a tile
 
         int minesFound = 0;
 
@@ -293,6 +299,7 @@ public class Minesweeper {
 
         // Reset game state
         tilesClicked = 0;
+        clearedLabel.setText("0% cleared");
         flagCount = 0;
         gameOver = false;
         mineCountLabel.setText("Mines: " + minecount);
@@ -506,6 +513,15 @@ public class Minesweeper {
             textScale = 4; // Expert
         }
         System.out.println("Text scale set to: " + textScale);
+    }
+
+    private void updateClearedLabel() {
+        int totalTiles = numRows * numCols;
+        int mineTiles = mineList.size();
+        int safeTiles = totalTiles - mineTiles;
+        int percent = (int) Math.round((tilesClicked * 100.0) / safeTiles);
+        percent = Math.min(percent, 100); // Clamp to 100%
+        clearedLabel.setText(percent + "% cleared");
     }
 }
 
