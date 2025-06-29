@@ -283,7 +283,6 @@ public class Minesweeper {
         } else {
             tile.setText(""); // No mines around, leave it empty
             if (tile.getIcon() != null) {
-                System.out.println("Tile at (" + r + ", " + c + ") has a flag icon, but no mines around.");
                 tile.setEnabled(true);
                 tile.setIcon(null);
                 // Decrement flagCount and update label
@@ -366,3 +365,4 @@ public class Minesweeper {
 //4) Make the mine count decrease when a flag is placed - DONE
 //5) In game over state, add a new icon for a mine that was flagged - DONE
 //6) Fix bug where a flagged tile that is later cleared removes the flag and corrects the flag count - THINK DONE
+//7) Add UI for different difficulty levels
