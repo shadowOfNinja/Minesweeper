@@ -121,10 +121,12 @@ public class Minesweeper {
         JMenuItem beginnerItem = new JMenuItem("Beginner (8x8, 10 mines)");
         JMenuItem intermediateItem = new JMenuItem("Intermediate (16x16, 40 mines)");
         JMenuItem expertItem = new JMenuItem("Expert (24x24, 99 mines)");
+        JMenuItem exitItem = new JMenuItem("Exit");
 
         gameMenu.add(beginnerItem);
         gameMenu.add(intermediateItem);
         gameMenu.add(expertItem);
+        gameMenu.add(exitItem);
         menuBar.add(gameMenu);
         frame.setJMenuBar(menuBar);
 
@@ -132,6 +134,7 @@ public class Minesweeper {
         beginnerItem.addActionListener(e -> setDifficulty(8, 8, 10));
         intermediateItem.addActionListener(e -> setDifficulty(16, 16, 40));
         expertItem.addActionListener(e -> setDifficulty(24, 24, 99));
+        exitItem.addActionListener(e -> System.exit(0));
 
         setMines();
     }
